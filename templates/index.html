@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YouTube Channel Parser</title>
+<link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+<link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="/static/icon-512.png">
+<link rel="apple-touch-icon" href="/static/icon-192.png">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: #0f0f0f;
+  color: #fff;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48px 16px 80px;
+}
+
+/* ── Header ── */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 36px;
+}
+.logo {
+  width: 44px;
+  height: 30px;
+  background: #ff0000;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.logo svg { display: block; }
+.header-text h1 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+.header-text p {
+  color: #777;
+  font-size: 0.82rem;
+  margin-top: 2px;
+}
+
+/* ── Card ── */
+.card {
+  background: #181818;
+  border: 1px solid #272727;
+  border-radius: 18px;
+  padding: 30px 28px;
+  width: 100%;
+  max-width: 640px;
+}
+
+/* ── Input Section ── */
+.field-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.input-wrap {
+  position: relative;
+}
+.input-wrap .yt-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+input#url-input {
+  width: 100%;
+  background: #0f0f0f;
+  border: 1.5px solid #2e2e2e;
+  border-radius: 11px;
+  color: #fff;
+  font-size: 0.97rem;
+  padding: 13px 16px 13px 44px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  font-family: inherit;
+}
+input#url-input:focus {
+  border-color: #ff0000;
+  box-shadow: 0 0 0 3px rgba(255,0,0,0.12);
+}
+input#url-input::placeholder { color: #444; }
+
+.hint {
+  margin-top: 7px;
+  font-size: 0.78rem;
+  color: #555;
+}
+.hint code {
+  color: #888;
+  background: #222;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+.btn-parse {
+  width: 100%;
+  background: #ff0000;
+  color: #fff;
+  border: none;
+  border-radius: 11px;
+  font-size: 0.97rem;
+  font-weight: 600;
+  padding: 13px;
+  cursor: pointer;
+  margin-top: 14px;
+  transition: background 0.18s, transform 0.1s, opacity 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: inherit;
+}
+.btn-parse:hover:not(:disabled) { background: #d90000; }
+.btn-parse:active:not(:disabled) { transform: scale(0.985); }
+.btn-parse:disabled { background: #3a3a3a; color: #666; cursor: not-allowed; }
+
+/* ── Error ── */
+.error-box {
+  display: none;
+  margin-top: 16px;
+  background: rgba(255, 60, 60, 0.1);
+  border: 1px solid rgba(255, 60, 60, 0.3);
+  border-radius: 10px;
+  padding: 12px 15px;
+  color: #ff7070;
+  font-size: 0.88rem;
+  display: none;
+}
+
+/* ── Progress Section ── */
+.section {
+  margin-top: 26px;
+  border-top: 1px solid #242424;
+  padding-top: 24px;
+}
+.section-title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: #555;
+  margin-bottom: 14px;
+}
+
+.steps { display: flex; flex-direction: column; gap: 10px; }
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 16px;
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 11px;
+  transition: border-color 0.25s, background 0.25s;
+}
+.step.active {
+  border-color: #ff3030;
+  background: rgba(255, 48, 48, 0.06);
+}
+.step.done {
+  border-color: #1a7a3a;
+  background: rgba(0, 180, 70, 0.05);
+}
+
+.step-num {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid #2e2e2e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #444;
+  flex-shrink: 0;
+  transition: all 0.25s;
+}
+.step.active .step-num {
+  border-color: #ff3030;
+  color: #ff3030;
+}
+.step.done .step-num {
+  background: #00b84d;
+  border-color: #00b84d;
+  color: #fff;
+  font-size: 0.85rem;
+}
+
+.step-text {
+  flex: 1;
+  font-size: 0.92rem;
+  color: #555;
+  transition: color 0.25s;
+}
+.step.active .step-text { color: #ddd; }
+.step.done .step-text { color: #666; }
+
+/* Spinner */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner {
+  width: 14px; height: 14px;
+  border: 2px solid rgba(255,48,48,0.25);
+  border-top-color: #ff3030;
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
+
+/* ── Results ── */
+.results-stats {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 20px;
+}
+.stat-count {
+  background: linear-gradient(135deg, #ff0000, #cc0000);
+  color: #fff;
+  font-size: 2.2rem;
+  font-weight: 800;
+  padding: 14px 20px;
+  border-radius: 14px;
+  line-height: 1;
+  min-width: 90px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.stat-meta h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+.stat-meta p {
+  color: #666;
+  font-size: 0.8rem;
+  word-break: break-all;
+}
+
+.actions {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.btn-action {
+  background: #222;
+  color: #ccc;
+  border: 1px solid #2e2e2e;
+  border-radius: 9px;
+  padding: 9px 16px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  font-family: inherit;
+}
+.btn-action:hover { background: #2a2a2a; border-color: #444; color: #fff; }
+.btn-action.copied {
+  background: rgba(0,184,77,0.12);
+  border-color: #00b84d;
+  color: #00b84d;
+}
+
+/* Links list */
+.links-box {
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 11px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.links-box::-webkit-scrollbar { width: 5px; }
+.links-box::-webkit-scrollbar-track { background: transparent; }
+.links-box::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+.links-box::-webkit-scrollbar-thumb:hover { background: #444; }
+
+.link-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  border-bottom: 1px solid #191919;
+  transition: background 0.12s;
+}
+.link-row:last-child { border-bottom: none; }
+.link-row:hover { background: #161616; }
+
+.link-index {
+  color: #444;
+  font-size: 0.72rem;
+  min-width: 28px;
+  text-align: right;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+.link-row a {
+  color: #5b9eff;
+  text-decoration: none;
+  font-size: 0.83rem;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.link-row a:hover { color: #88b8ff; text-decoration: underline; }
+
+.links-footer {
+  text-align: center;
+  padding: 11px;
+  color: #555;
+  font-size: 0.78rem;
+  border-top: 1px solid #1e1e1e;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-in { animation: fadeIn 0.3s ease forwards; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="logo">
+    <svg width="20" height="14" viewBox="0 0 20 14">
+      <polygon points="7,1 19,7 7,13" fill="white"/>
+    </svg>
+  </div>
+  <div class="header-text">
+    <h1>YouTube Parser</h1>
+    <p>Извлечение всех ссылок с канала</p>
+  </div>
+</div>
+
+<!-- Main card -->
+<div class="card">
+
+  <!-- URL Input -->
+  <label class="field-label" for="url-input">Ссылка на канал</label>
+  <div class="input-wrap">
+    <svg class="yt-icon" width="18" height="13" viewBox="0 0 20 14" fill="#888">
+      <rect rx="4" width="20" height="14" fill="#888"/>
+      <polygon points="7,3 16,7 7,11" fill="#181818"/>
+    </svg>
+    <input id="url-input" type="text"
+      placeholder="https://www.youtube.com/@channelname"
+      autocomplete="off" spellcheck="false">
+  </div>
+  <p class="hint">Форматы: <code>@username</code> &nbsp;·&nbsp; <code>/channel/ID</code> &nbsp;·&nbsp; <code>/c/name</code></p>
+
+  <button class="btn-parse" id="parse-btn" onclick="startParse()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+    </svg>
+    Начать парсинг
+  </button>
+
+  <!-- Error -->
+  <div class="error-box" id="error-box"></div>
+
+  <!-- Progress -->
+  <div class="section" id="progress-section" style="display:none">
+    <div class="section-title">Прогресс</div>
+    <div class="steps">
+      <div class="step" id="step-1">
+        <div class="step-num" id="step-1-num">1</div>
+        <div class="step-text">Проверка доступности канала</div>
+      </div>
+      <div class="step" id="step-2">
+        <div class="step-num" id="step-2-num">2</div>
+        <div class="step-text">Извлечение списка видео</div>
+      </div>
+      <div class="step" id="step-3">
+        <div class="step-num" id="step-3-num">3</div>
+        <div class="step-text">Сохранение результатов</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div class="section animate-in" id="results-section" style="display:none">
+    <div class="section-title">Результат</div>
+
+    <div class="results-stats">
+      <div class="stat-count" id="stat-count">0</div>
+      <div class="stat-meta">
+        <h3 id="stat-channel">Видео найдено</h3>
+        <p id="stat-file">—</p>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn-action" id="copy-btn" onclick="copyAll()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="9" y="9" width="13" height="13" rx="2"/>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+        </svg>
+        Копировать все
+      </button>
+      <button class="btn-action" onclick="downloadFile()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Скачать .txt
+      </button>
+      <button class="btn-action" onclick="reset()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="1 4 1 10 7 10"/>
+          <path d="M3.51 15a9 9 0 1 0 .49-3.33"/>
+        </svg>
+        Новый канал
+      </button>
+    </div>
+
+    <div class="links-box" id="links-box"></div>
+    <div class="links-footer" id="links-footer" style="display:none"></div>
+  </div>
+
+</div><!-- /card -->
+
+<script>
+let allLinks = [];
+let currentFile = '';
+let es = null;
+
+const $ = id => document.getElementById(id);
+
+function showError(msg) {
+  const el = $('error-box');
+  el.textContent = '⚠  ' + msg;
+  el.style.display = 'block';
+}
+function hideError() { $('error-box').style.display = 'none'; }
+
+function setStep(n, state) {
+  const step = $('step-' + n);
+  const num  = $('step-' + n + '-num');
+  step.className = 'step' + (state ? ' ' + state : '');
+  if (state === 'active') {
+    num.innerHTML = '<div class="spinner"></div>';
+  } else if (state === 'done') {
+    num.innerHTML = '✓';
+  } else {
+    num.textContent = n;
+  }
+}
+
+function resetSteps() { [1, 2, 3].forEach(n => setStep(n, '')); }
+
+function setParseBtn(loading) {
+  const btn = $('parse-btn');
+  btn.disabled = loading;
+  btn.innerHTML = loading
+    ? '<div class="spinner" style="border-color:rgba(255,255,255,.2);border-top-color:#fff;width:15px;height:15px"></div> Парсинг...'
+    : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+         <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+       </svg> Начать парсинг`;
+}
+
+async function startParse() {
+  const url = $('url-input').value.trim();
+  if (!url) { showError('Введите ссылку на канал'); return; }
+
+  hideError();
+  resetSteps();
+  setParseBtn(true);
+  $('progress-section').style.display = 'block';
+  $('results-section').style.display = 'none';
+
+  try {
+    const resp = await fetch('/parse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) {
+      showError(data.error || 'Ошибка запроса');
+      setParseBtn(false);
+      return;
+    }
+  } catch {
+    showError('Нет соединения с сервером');
+    setParseBtn(false);
+    return;
+  }
+
+  if (es) es.close();
+  es = new EventSource('/stream');
+  es.onmessage = e => handle(JSON.parse(e.data));
+  es.onerror   = () => { showError('Соединение с сервером прервано'); setParseBtn(false); es.close(); };
+}
+
+function handle(msg) {
+  if (msg.type === 'step')      { setStep(msg.step, 'active'); }
+  else if (msg.type === 'step_done') { setStep(msg.step, 'done'); }
+  else if (msg.type === 'error')     { showError(msg.message); setParseBtn(false); es.close(); }
+  else if (msg.type === 'done')      { es.close(); showResults(msg); setParseBtn(false); }
+  // ping — ignore
+}
+
+function showResults(data) {
+  allLinks = data.links || [];
+  currentFile = data.file || '';
+
+  $('stat-count').textContent  = data.count;
+  $('stat-channel').textContent = (data.channel || 'Канал') + ' — видео найдено';
+  $('stat-file').textContent    = data.file ? 'Файл: output/' + data.file : 'Видео не найдены';
+
+  const box = $('links-box');
+  box.innerHTML = '';
+  allLinks.forEach((link, i) => {
+    const row = document.createElement('div');
+    row.className = 'link-row';
+    const number = document.createElement('span');
+    number.className = 'link-index';
+    number.textContent = String(i + 1);
+    const anchor = document.createElement('a');
+    anchor.textContent = link;
+    if (/^https:\/\/www\.youtube\.com\/watch\?v=[A-Za-z0-9_-]{11}$/.test(link)) {
+      anchor.href = link;
+      anchor.target = '_blank';
+      anchor.rel = 'noopener noreferrer';
+    }
+    row.append(number, anchor);
+    box.appendChild(row);
+  });
+
+  const footer = $('links-footer');
+  if (data.count > allLinks.length) {
+    footer.textContent = `Показаны первые ${allLinks.length} из ${data.count}. Все ссылки — в файле.`;
+    footer.style.display = 'block';
+  } else {
+    footer.style.display = 'none';
+  }
+
+  const sec = $('results-section');
+  sec.style.display = 'block';
+  sec.classList.remove('animate-in');
+  void sec.offsetWidth;
+  sec.classList.add('animate-in');
+}
+
+async function copyAll() {
+  const btn = $('copy-btn');
+  const origHTML = btn.innerHTML;
+  try {
+    await navigator.clipboard.writeText(allLinks.join('\n'));
+    btn.classList.add('copied');
+    btn.innerHTML = origHTML.replace('Копировать все', 'Скопировано ✓');
+    setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = origHTML; }, 2000);
+  } catch {
+    alert('Не удалось скопировать');
+  }
+}
+
+function downloadFile() {
+  if (currentFile) window.location.href = '/download/' + encodeURIComponent(currentFile);
+}
+
+function reset() {
+  $('url-input').value = '';
+  $('results-section').style.display = 'none';
+  $('progress-section').style.display = 'none';
+  hideError();
+  $('url-input').focus();
+}
+
+$('url-input').addEventListener('keydown', e => { if (e.key === 'Enter') startParse(); });
+$('url-input').addEventListener('input', hideError);
+</script>
+</body>
+</html>
